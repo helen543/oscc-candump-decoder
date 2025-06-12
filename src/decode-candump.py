@@ -1,14 +1,21 @@
-import os, cantools
+import cantools, logging, os
 
 db = cantools.database.load_file(os.path.join(os.path.dirname(__file__), "..", "data", "oscc.dbc"))
 log_file = os.path.join(os.path.dirname(__file__), "..", "data", "candump.txt")
 
+logging.basicConfig (
+    level = logging.INFO,
+    format = '%(asctime)s - %(levelname)s - %(message)s'
+)
+
 def parse(line):
     try:
-        can_id = int(line.split()[4], 16)
-        data = bytes.fromhex("".join(line.split()[6:14]))
+        parts = line.split()
+        can_id = int(parts[4], 16)
+        data = bytes.fromhex("".join(parts[6:14]))
         return can_id, data
-    except:
+    except (IndexError, ValueError) as e:
+        logging.debug(f"Error on line {line.strip()} - {e}")
         return None
 
 last = {}
@@ -24,5 +31,5 @@ with open(log_file) as f:
             if last.get(can_id) != decoded:
                 last[can_id] = decoded
                 print(f"ID 0x{can_id:03X}: {', '.join(f'{k}={v}' for k, v in decoded.items())}")
-        except:
-            pass
+        except Exception as e:
+            logging.warning(f"Failed to decode ID 0x{can_id:03X} with data {data.hex()}: {e}")

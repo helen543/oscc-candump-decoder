@@ -17,3 +17,5 @@ Reads candump, decodes it using a DBC file, returns changes in signal values.
 3. run:
     ```bash 
     python src/decode_candump.py
+    # to include parsing/decoding errors
+    python src/decode_candump.py --debug
