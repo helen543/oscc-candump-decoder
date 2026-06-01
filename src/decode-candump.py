@@ -1,7 +1,4 @@
-import cantools, logging, os
-
-db = cantools.database.load_file(os.path.join(os.path.dirname(__file__), "..", "data", "oscc.dbc"))
-log_file = os.path.join(os.path.dirname(__file__), "..", "data", "candump.txt")
+import cantools, logging, os, argparse
 
 logging.basicConfig (
     level = logging.INFO,
@@ -18,18 +15,31 @@ def parse(line):
         logging.debug(f"Error on line {line.strip()} - {e}")
         return None
 
-last = {}
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Decode OSCC candump logs.")
+    parser.add_argument("candump_file", help="Path to the candump log file")
+    parser.add_argument("dbc_file",     help="Path to the DBC file")
+    parser.add_argument("--debug", action="store_true", help="Show decoding errors")
+    args = parser.parse_args()
 
-with open(log_file) as f:
-    for line in f:
-        result = parse(line)
-        if not result:
-            continue
-        can_id, data = result
-        try:
-            decoded = db.decode_message(can_id, data)
-            if last.get(can_id) != decoded:
-                last[can_id] = decoded
-                print(f"ID 0x{can_id:03X}: {', '.join(f'{k}={v}' for k, v in decoded.items())}")
-        except Exception as e:
-            logging.warning(f"Failed to decode ID 0x{can_id:03X} with data {data.hex()}: {e}")
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    # was: db = cantools.database.load_file(hardcoded path)
+    db = cantools.database.load_file(args.dbc_file)
+
+    last = {}
+    # was: with open(log_file)
+    with open(args.candump_file) as f:
+        for line in f:
+            result = parse(line)
+            if not result:
+                continue
+            can_id, data = result
+            try:
+                decoded = db.decode_message(can_id, data)
+                if last.get(can_id) != decoded:
+                    last[can_id] = decoded
+                    print(f"ID 0x{can_id:03X}: {', '.join(f'{k}={v}' for k, v in decoded.items())}")
+            except Exception as e:
+                logging.warning(f"Failed to decode ID 0x{can_id:03X} with data {data.hex()}: {e}")
